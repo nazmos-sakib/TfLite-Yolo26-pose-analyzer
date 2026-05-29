@@ -1,6 +1,6 @@
 # Yolo 26-Local-Pose-Analyzer
 
-![Demo](./app/src/main/res/raw/ss_1.gif)
+![Demo](app/src/main/res/raw/ss_1.gif)
 
 # ✅ Yolo 26 pose Model Summary
 

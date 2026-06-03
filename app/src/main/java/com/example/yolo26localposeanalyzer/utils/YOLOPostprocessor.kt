@@ -7,7 +7,12 @@ import com.example.yolo26localposeanalyzer.domain.model.DetectedObject
 import com.example.yolo26localposeanalyzer.domain.model.DetectedPose
 import com.example.yolo26localposeanalyzer.domain.model.Keypoint
 import com.example.yolo26localposeanalyzer.domain.model.LetterboxResult
+import com.example.yolo26localposeanalyzer.domain.model.ReverseMapping
+import com.example.yolo26localposeanalyzer.domain.model.deNormalize
+import com.example.yolo26localposeanalyzer.domain.model.mapFromModel
+import com.example.yolo26localposeanalyzer.domain.model.mapToPreview
 import com.example.yolo26localposeanalyzer.utils.extentions.mapFromModel
+import com.example.yolo26localposeanalyzer.utils.extentions.mapToPreview
 
 
 object YOLOPostprocessor {
@@ -86,7 +91,8 @@ object YOLOPostprocessor {
     * */
     fun parseOutputShape300x57(
         outputArray: Array<Array<FloatArray>>,
-        letterBox: LetterboxResult
+        letterBox: LetterboxResult,
+        revMapping: ReverseMapping
     ): List<DetectedPose> {
         val detections = mutableListOf<DetectedPose>()
 
@@ -119,7 +125,8 @@ object YOLOPostprocessor {
             * pixelX = normalizedX * inputWidth
             * pixelY = normalizedY * inputHeight
             * */
-            val boundingBox = RectF(x1, y1, x2, y2).mapFromModel(letterBox)
+            val boundingBox = RectF(x1, y1, x2, y2)
+                .mapFromModel(letterBox).mapToPreview(revMapping)
             val label = if (classId < Constants.COCO_CLASSES.size) {
                 Constants.COCO_CLASSES[classId]
             } else {
@@ -142,7 +149,10 @@ object YOLOPostprocessor {
                 /*if (kc > 0.5f) {
                     keypoints.add(Keypoint(kx, ky, kc))
                 }*/
-                keypoints.add(Keypoint(kx, ky, kc))
+                keypoints.add(
+                    Keypoint(kx, ky, kc).deNormalize()
+                        .mapFromModel(letterBox).mapToPreview(revMapping)
+                )
             }
             detections.add(
                 DetectedPose(

@@ -3,6 +3,7 @@ package com.example.yolo26localposeanalyzer.utils.extentions
 import android.graphics.RectF
 import androidx.compose.ui.geometry.Size
 import com.example.yolo26localposeanalyzer.domain.model.LetterboxResult
+import com.example.yolo26localposeanalyzer.domain.model.ReverseMapping
 import kotlin.math.max
 
 
@@ -49,6 +50,18 @@ fun RectF.mapToPreview(
         top * scale + dy,
         right * scale + dx,
         bottom * scale + dy
+    )
+}
+
+fun RectF.mapToPreview(
+    mapping: ReverseMapping
+): RectF {
+
+    return RectF(
+        left * mapping.scale + mapping.dx,
+        top * mapping.scale + mapping.dy,
+        right * mapping.scale + mapping.dx,
+        bottom * mapping.scale + mapping.dy
     )
 }
 

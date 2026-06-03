@@ -25,6 +25,9 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -36,6 +39,7 @@ import com.example.yolo26localposeanalyzer.domain.model.Keypoint
 import com.example.yolo26localposeanalyzer.ui.viewmodel.CameraViewModel
 import com.example.yolo26localposeanalyzer.utils.ChoreographerFPSMonitor
 import com.example.yolo26localposeanalyzer.utils.Constants.PerformanceDebugTag
+import com.example.yolo26localposeanalyzer.utils.Utility
 import com.example.yolo26localposeanalyzer.utils.extentions.mapToPreview
 import com.example.yolo26localposeanalyzer.utils.extentions.rgbToBitmap
 import com.example.yolo26localposeanalyzer.utils.extentions.rotateBitmap
@@ -136,8 +140,10 @@ fun CameraScreen(viewModel: CameraViewModel) {
                         "CameraScreen: Time to prepare image: ${System.currentTimeMillis() - now}"
                     )
 
-                    viewModel.processFrame(rotatedBitMap)
-
+                    viewModel.processFrame(
+                        rotatedBitMap,
+                        Utility.getReverseMapping(previewViewSize,imageProxySize)
+                    )
                     //save image in local memory
                     /*scope.launch(Dispatchers.IO) {
                         //if (viewModel.isProcessing.value) return@launch
@@ -181,10 +187,25 @@ fun CameraScreen(viewModel: CameraViewModel) {
             modifier = Modifier.align(Alignment.TopStart),
         ) {
             Text(
+                text = buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = Color.White)) {
+                        append("Device Name: ")
+                    }
+                    withStyle(style = SpanStyle(color = Color.Green)) {
+                        append(Utility.getDeviceName())
+                    }
+                },
+                modifier = Modifier
+                    //.align(Alignment.TopStart)
+                    .padding(16.dp,5.dp) ,
+                color = Color.White,
+                fontSize = 14.sp
+            )
+            Text(
                 text = "PreviewView FPS: ${"%.1f".format(previewViewFps)}",
                 modifier = Modifier
                     //.align(Alignment.TopStart)
-                    .padding(16.dp,8.dp),
+                    .padding(16.dp,5.dp),
                 color = Color.White,
                 fontSize = 14.sp
             )
@@ -192,7 +213,7 @@ fun CameraScreen(viewModel: CameraViewModel) {
                 text = "ImageProxy FPS: ${"%.1f".format(imageProxyFps)}",
                 modifier = Modifier
                     //.align(Alignment.TopStart)
-                    .padding(16.dp,8.dp),
+                    .padding(16.dp,5.dp),
                 color = Color.White,
                 fontSize = 14.sp
             )
@@ -200,7 +221,7 @@ fun CameraScreen(viewModel: CameraViewModel) {
                 text = "Inference FPS: ${"%.1f".format(inferenceFps)}",
                 modifier = Modifier
                     //.align(Alignment.TopStart)
-                    .padding(16.dp,8.dp),
+                    .padding(16.dp,5.dp),
                 color = Color.White,
                 fontSize = 14.sp
             )
@@ -223,7 +244,7 @@ private fun DrawScope.drawBoundingBox(
     val previewTopOffset = (canvasSize.height - previewViewSize.height) / 2f
 
     val bbox = detection.boundingBox
-        .mapToPreview( previewViewSize, imageProxySize)
+        //.mapToPreview( previewViewSize, imageProxySize)
         .apply {
             offset(0f, previewTopOffset)
         }
@@ -269,8 +290,8 @@ private fun DrawScope.drawBoundingBox(
 
     detection.keyPoints.forEach { point->
 
-        val screenX = point.kx * previewViewSize.width
-        val screenY = point.ky * previewViewSize.height + previewTopOffset
+        val screenX = point.kx
+        val screenY = point.ky  + previewTopOffset
         val keypointPaint = Paint().apply {
             color = android.graphics.Color.GREEN
             style = Paint.Style.FILL
@@ -316,11 +337,11 @@ private fun DrawScope.drawSkeleton(
         if (kp1 == null || kp2 == null) return@forEach
         if (kp1.kc < 0.5f || kp2.kc < 0.5f) return@forEach
 
-        val x1 = kp1.kx * previewViewSize.width
-        val y1 = kp1.ky * previewViewSize.height + previewTopOffset
+        val x1 = kp1.kx
+        val y1 = kp1.ky  + previewTopOffset
 
-        val x2 = kp2.kx * previewViewSize.width
-        val y2 = kp2.ky * previewViewSize.height + previewTopOffset
+        val x2 = kp2.kx
+        val y2 = kp2.ky  + previewTopOffset
 
         drawLine(
             color = Color.Yellow,

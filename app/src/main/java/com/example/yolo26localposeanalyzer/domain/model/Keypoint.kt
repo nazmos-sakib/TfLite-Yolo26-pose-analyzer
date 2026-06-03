@@ -1,7 +1,41 @@
 package com.example.yolo26localposeanalyzer.domain.model
 
+import android.graphics.RectF
+import kotlin.div
+
 data class Keypoint(
     val kx: Float,
     val ky: Float,
     val kc: Float,
 )
+
+
+
+fun  Keypoint.deNormalize(): Keypoint {
+    return Keypoint(
+        kx * 640,
+        ky * 640,
+        kc
+    )
+}
+
+fun  Keypoint.mapFromModel(
+    letterbox: LetterboxResult
+): Keypoint {
+    // Step 1: remove letterbox
+    val x = (kx - letterbox.padX) / letterbox.scale
+    val y = (ky - letterbox.padY) / letterbox.scale
+    return Keypoint(x,y,kc)
+}
+
+fun  Keypoint.mapToPreview(
+    mapping: ReverseMapping
+):  Keypoint {
+    // Step 2: revers mapping to previewView
+
+    return Keypoint(
+        kx * mapping.scale + mapping.dx,
+        ky * mapping.scale + mapping.dy,
+        kc
+    )
+}

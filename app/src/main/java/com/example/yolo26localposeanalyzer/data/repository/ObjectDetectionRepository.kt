@@ -18,6 +18,7 @@ import java.nio.ByteOrder
 import kotlin.math.min
 import androidx.core.graphics.createBitmap
 import com.example.yolo26localposeanalyzer.domain.model.DetectedPose
+import com.example.yolo26localposeanalyzer.domain.model.ReverseMapping
 import org.tensorflow.lite.Tensor
 
 class ObjectDetectionRepository(
@@ -97,7 +98,7 @@ class ObjectDetectionRepository(
         }
     }
 
-    suspend fun detectPose(bitmap: Bitmap): List<DetectedPose> {
+    suspend fun detectPose(bitmap: Bitmap,revMapping: ReverseMapping): List<DetectedPose> {
 
         val inputTensor = modelDataSource.getInputTensor()
         val outputTensor = modelDataSource.getOutputTensor()
@@ -139,7 +140,8 @@ class ObjectDetectionRepository(
             // Postprocess results
             YOLOPostprocessor.parseOutputShape300x57(
                 outputBuffer,
-                result.second
+                result.second,
+                revMapping
             )
         } catch (e: Exception) {
             e.printStackTrace()

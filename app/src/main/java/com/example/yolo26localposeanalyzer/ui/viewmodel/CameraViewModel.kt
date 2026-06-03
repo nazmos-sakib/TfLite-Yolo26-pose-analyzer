@@ -14,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.yolo26localposeanalyzer.data.repository.ObjectDetectionRepository
 import com.example.yolo26localposeanalyzer.domain.model.DetectedObject
 import com.example.yolo26localposeanalyzer.domain.model.DetectedPose
+import com.example.yolo26localposeanalyzer.domain.model.ReverseMapping
 import com.example.yolo26localposeanalyzer.utils.Constants.ImageDebugTag
 import com.example.yolo26localposeanalyzer.utils.Constants.PerformanceDebugTag
 import com.example.yolo26localposeanalyzer.utils.Constants.UiDebugTag
@@ -65,7 +66,7 @@ class CameraViewModel(
         _imageProxyFps.value = imageProxyFpsCounter.fps.toFloat()
     }
 
-    fun processFrame(bitmap: Bitmap) {
+    fun processFrame(bitmap: Bitmap,revMapping: ReverseMapping) {
         if (_isProcessing.value) return
 
 
@@ -75,7 +76,7 @@ class CameraViewModel(
 
             try {
                 //val results = repository.detectObjects(bitmap)
-                val results = repository.detectPose(bitmap)
+                val results = repository.detectPose(bitmap,revMapping)
                 Log.d(UiDebugTag, "viewmodel: processFrame: objects found: ${results.size}")
                 Log.d(UiDebugTag, "viewmodel: processFrame: $results")
                 withContext(Dispatchers.Main) {

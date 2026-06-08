@@ -1,8 +1,6 @@
 package com.example.yolo26localposeanalyzer.utils
 
 object Constants {
-    const val MODEL_PATH_26N_16 = "yolo26n_float16.tflite"
-    const val MODEL_PATH_26N_32 = "yolo26n_float32.tflite"
     const val MODEL_PATH_26N_POSE_16 = "yolo26n-pose_float16.tflite"
     const val MODEL_PATH_26N_POSE_32 = "yolo26n-pose_float32.tflite"
     const val MODEL_PATH_26N_POSE_FULL_INTEGER_QUANT = "yolo26n-pose_full_integer_quant.tflite"

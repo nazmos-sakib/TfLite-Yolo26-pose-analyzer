@@ -23,11 +23,7 @@ object Utility {
         val dy = (previewViewSize.height - scaledHeight) / 2f
 
         //logs
-        /*d(ImageDebugTag, "mapToPreview: previewViewSize height: ${previewViewSize.height}")
-        d(ImageDebugTag, "mapToPreview: previewViewSize width: ${previewViewSize.width}")
-        d(ImageDebugTag, "mapToPreview: imageProxySize h: ${imageProxySize.height}")
-        d(ImageDebugTag, "mapToPreview: imageProxySize w: ${imageProxySize.width}")
-
+        /*
         d(ImageDebugTag, "mapToPreview: scale: $scale")
         d(ImageDebugTag, "mapToPreview: dx: $dx")
         d(ImageDebugTag, "mapToPreview: dy: $dy")*/

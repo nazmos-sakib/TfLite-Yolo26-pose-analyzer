@@ -18,12 +18,26 @@ import java.nio.ByteOrder
 import kotlin.math.min
 import androidx.core.graphics.createBitmap
 import com.example.yolo26localposeanalyzer.domain.model.DetectedPose
+import com.example.yolo26localposeanalyzer.domain.model.LetterboxResultV2
 import com.example.yolo26localposeanalyzer.domain.model.ReverseMapping
 import org.tensorflow.lite.Tensor
+import kotlin.IntArray
+import kotlin.times
 
 class ObjectDetectionRepository(
     private val modelDataSource: LocalModelDataSource
 ) {
+    private val size: Int
+    val inputBuffer:ByteBuffer
+    private val pixels:IntArray
+    val letterBoxBitmap: Bitmap
+    val canvas: Canvas
+
+    val outputBuffer = Array(1) {
+        Array(300) {
+            FloatArray(57)
+        }
+    }
 
     init {
         //modelDataSource.loadModel(Constants.MODEL_PATH_26N_POSE_16)
@@ -31,6 +45,13 @@ class ObjectDetectionRepository(
         //modelDataSource.loadModel(Constants.MODEL_PATH_26N_POSE_INT8)
         modelDataSource.loadModel(Constants.MODEL_PATH_26N_POSE_INTEGER_QUANT)
         //modelDataSource.loadModel(Constants.MODEL_PATH_26N_POSE_FULL_INTEGER_QUANT)
+        val inputTensor = modelDataSource.getInputTensor()
+
+        inputBuffer = createBuffer(inputTensor)
+        size = inputTensor.shape()[1]
+        pixels = IntArray(size * size)
+        letterBoxBitmap = createBitmap(size, size)
+        canvas = Canvas(letterBoxBitmap)
     }
 
     /**
@@ -43,95 +64,13 @@ class ObjectDetectionRepository(
     /**
      * Detect objects in bitmap
      */
-    suspend fun detectObjects(bitmap: Bitmap): List<DetectedObject> {
-        val inputTensor = modelDataSource.getInputTensor()
-        val outputTensor = modelDataSource.getOutputTensor()
-        val dataType = inputTensor.dataType()
-
-        bitmap
-        return try {
-            // Preprocess image
-            val result = prepareInput(
-                bitmap,
-                inputTensor
-                )
-
-            //make the input buffer dynamic
-            /* modelDataSource.getInputShape()?.get(1) -> input tensor
-            * send input tensor to createBuffer()
-            * same for output buffer.
-            * try to print bitmap shape/size/details/memory size
-            * compare with input buffer. if it fits. how much info/data is lost
-            * */
-            val inputBuffer = result.first
-
-            Log.d(Constants.TFModelDebugTag, "ObjectDetectionRepository:detectObjects: $inputBuffer.")
-
-            // Prepare output buffer
-            // Output shape: [1, 300, 6]
-            /*
-            * don't hard code 300
-            * make it dynamic
-            * get shape from the model itself
-            * modelDataSource.getOutputShape()*/
-
-            val outputBuffer = Array(1) {
-                Array(300) {
-                    FloatArray(6)
-                }
-            }
-
-            // Run inference
-            modelDataSource.runInference(inputBuffer, outputBuffer)
-
-            //return statement
-            // Postprocess results
-            YOLOPostprocessor.parseOutputShape300x6(
-                outputBuffer,
-                result.second
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
-        } finally {
-            bitmap.recycle()
-        }
-    }
 
     suspend fun detectPose(bitmap: Bitmap,revMapping: ReverseMapping): List<DetectedPose> {
 
-        val inputTensor = modelDataSource.getInputTensor()
-        val outputTensor = modelDataSource.getOutputTensor()
-        val dataType = inputTensor.dataType()
-
         bitmap
         return try {
             // Preprocess image
-            val result = prepareInput(bitmap, inputTensor)
-
-            //make the input buffer dynamic
-            /* modelDataSource.getInputShape()?.get(1) -> input tensor
-            * send input tensor to createBuffer()
-            * same for output buffer.
-            * try to print bitmap shape/size/details/memory size
-            * compare with input buffer. if it fits. how much info/data is lost
-            * */
-            val inputBuffer = result.first
-
-            // Prepare output buffer
-            // Output shape: [1, 300, 57]
-            /*
-            * don't hard code 300
-            * make it dynamic
-            * get shape from the model itself
-            * modelDataSource.getOutputShape()*/
-
-            val outputBuffer = Array(1) {
-                Array(300) {
-                    FloatArray(57)
-                }
-            }
-
+            val v2LetterBoxResult = prepareInput(bitmap)
 
             // Run inference
             modelDataSource.runInference(inputBuffer, outputBuffer)
@@ -140,7 +79,7 @@ class ObjectDetectionRepository(
             // Postprocess results
             YOLOPostprocessor.parseOutputShape300x57(
                 outputBuffer,
-                result.second,
+                v2LetterBoxResult,
                 revMapping
             )
         } catch (e: Exception) {
@@ -152,21 +91,16 @@ class ObjectDetectionRepository(
     }
 
 
-    fun prepareInput(bitmap: Bitmap,inputTensor: Tensor): Pair<ByteBuffer, LetterboxResult> {
+    fun prepareInput(bitmap: Bitmap): LetterboxResultV2 {
         //val resizedBitmap = bitmap.scale(MODEL_INPUT_SIZE, MODEL_INPUT_SIZE)
-        val inputSize = inputTensor.shape()[1]
-        val result = letterbox(bitmap, inputSize)
-        // Create ByteBuffer for input
-        val byteBuffer = createBuffer(inputTensor)
 
-        // Convert bitmap to normalized float values (0-1 range)
-        /*val pixels = IntArray(MODEL_INPUT_SIZE * MODEL_INPUT_SIZE)
-        result.bitmap.getPixels(pixels, 0, MODEL_INPUT_SIZE, 0, 0,
-            MODEL_INPUT_SIZE, MODEL_INPUT_SIZE
-        )*/
-        val pixels = IntArray(inputSize * inputSize)
-        result.bitmap.getPixels(pixels, 0, inputSize, 0, 0,
-            inputSize, inputSize
+
+        val result = letterbox(bitmap, size)
+
+        inputBuffer.rewind()
+
+        letterBoxBitmap.getPixels(pixels, 0, size, 0, 0,
+            size, size
         )
 
         for (pixel in pixels) {
@@ -175,13 +109,13 @@ class ObjectDetectionRepository(
             val b = ((pixel and 0xFF) / 255.0f)
 
             // YOLOv8 expects RGB format, normalized to [0,1]
-            byteBuffer.putFloat(r)
-            byteBuffer.putFloat(g)
-            byteBuffer.putFloat(b)
+            inputBuffer.putFloat(r)
+            inputBuffer.putFloat(g)
+            inputBuffer.putFloat(b)
         }
 
         //resizedBitmap.recycle()
-        return Pair(byteBuffer, result)
+        return result
     }
 
     private fun createBuffer(tensor: Tensor): java.nio.ByteBuffer {
@@ -191,7 +125,9 @@ class ObjectDetectionRepository(
         }
     }
 
-    fun letterbox(bitmap: Bitmap, size: Int = 640): LetterboxResult {
+    //preserving aspect ratio and padding the remaining area.
+    //That's the standard "letterbox" preprocessing
+    fun letterbox(bitmap: Bitmap, size: Int = 640): LetterboxResultV2 {
         val width = bitmap.width
         val height = bitmap.height
 
@@ -202,8 +138,6 @@ class ObjectDetectionRepository(
 
         val resized = bitmap.scale(newWidth, newHeight)
 
-        val output = createBitmap(size, size)
-        val canvas = Canvas(output)
 
         val padX = (size - newWidth) / 2f
         val padY = (size - newHeight) / 2f
@@ -211,7 +145,11 @@ class ObjectDetectionRepository(
         canvas.drawColor(Color.BLACK)
         canvas.drawBitmap(resized, padX, padY, null)
 
-        return LetterboxResult(output, scale, padX, padY)
+        return LetterboxResultV2( size,scale, padX, padY)
+    }
+
+    fun getModelDelegate(): String{
+        return modelDataSource.delegate
     }
 
     /**

@@ -177,7 +177,9 @@ class CameraViewModel(
 
     }
 
-
+    fun getModelDelegate(): String{
+        return repository.getModelDelegate()
+    }
 
     fun updateInferenceFPS() {
          inferenceFpsCounter.tick("Inference FPS")

@@ -19,8 +19,10 @@ import java.nio.channels.FileChannel
 class LocalModelDataSource(private val context: Context) {
 
     private var tflite: Interpreter? = null
-    private var gpuDelegate: GpuDelegate? = null
     private var  nnApiDelegate: NnApiDelegate? = null
+
+    var delegate: String = ""
+        private set
 
     /**
      * Load TensorFlow Lite model from assets
@@ -50,9 +52,9 @@ class LocalModelDataSource(private val context: Context) {
 
         try {
             val compatList = CompatibilityList()
-            val delegate = GpuDelegate(compatList.bestOptionsForThisDevice)
-            options.addDelegate(delegate)
-
+            val gpuDelegate = GpuDelegate(compatList.bestOptionsForThisDevice)
+            options.addDelegate(gpuDelegate)
+            delegate = "GPU"
             return Interpreter(model, options)
 
         } catch (e: Exception) {
@@ -68,7 +70,7 @@ class LocalModelDataSource(private val context: Context) {
             setNumThreads(numThreads)
         }
         Log.d(TFModelDebugTag, "Using NNAPI")
-
+        this.delegate = "NNAPI"
         return Interpreter(model, options)
     }
     fun createNNAPIExplicitInterpreter(model: ByteBuffer): Interpreter{
@@ -86,7 +88,7 @@ class LocalModelDataSource(private val context: Context) {
             setNumThreads(numThreads)
         }
         Log.d(TFModelDebugTag, "Using NNAPI")
-
+        delegate = "NNAPI"
         return Interpreter(model, options)
     }
 
@@ -102,6 +104,7 @@ class LocalModelDataSource(private val context: Context) {
         }
 
         Log.d(TFModelDebugTag, "⚠️ Using CPU with $numThreads threads")
+        delegate = "CPU"
         return Interpreter(model, options)
     }
 
@@ -121,7 +124,7 @@ class LocalModelDataSource(private val context: Context) {
                     setNumThreads(numThreads) // harmless for GPU
                 }
                 Log.d(TFModelDebugTag, "Using GPU")
-
+                this.delegate = "GPU"
                 return Interpreter(model, options)
             }else{
                 Log.d(TFModelDebugTag, "⚠️ GPU delegation is not supported")
@@ -137,7 +140,7 @@ class LocalModelDataSource(private val context: Context) {
                 setNumThreads(numThreads)
             }
             Log.d(TFModelDebugTag, "Using NNAPI")
-
+            this.delegate = "NNAPI"
             return Interpreter(model, options)
         } catch (e: Exception) {
             Log.e(TFModelDebugTag, "NNAPI failed: ${e.message}")
@@ -148,7 +151,7 @@ class LocalModelDataSource(private val context: Context) {
             setNumThreads(numThreads)
             setUseXNNPACK(true)
         }
-
+        this.delegate = "CPU"
         Log.d(TFModelDebugTag, "Using CPU with $numThreads threads")
         return Interpreter(model, options)
     }
@@ -215,9 +218,6 @@ class LocalModelDataSource(private val context: Context) {
     fun close() {
         tflite?.close()
         tflite = null
-        gpuDelegate?.close()
-        gpuDelegate = null
         nnApiDelegate?.close()
-        gpuDelegate = null
     }
 }

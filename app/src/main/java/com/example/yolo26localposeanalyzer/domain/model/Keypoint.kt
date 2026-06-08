@@ -28,6 +28,15 @@ fun  Keypoint.mapFromModel(
     return Keypoint(x,y,kc)
 }
 
+fun  Keypoint.mapFromModel(
+    letterbox: LetterboxResultV2
+): Keypoint {
+    // Step 1: remove letterbox
+    val x = (kx - letterbox.padX) / letterbox.scale
+    val y = (ky - letterbox.padY) / letterbox.scale
+    return Keypoint(x,y,kc)
+}
+
 fun  Keypoint.mapToPreview(
     mapping: ReverseMapping
 ):  Keypoint {

@@ -202,6 +202,24 @@ fun CameraScreen(viewModel: CameraViewModel) {
                 fontSize = 14.sp
             )
             Text(
+                text = buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = Color.White)) {
+                        append("Implementation: ")
+                    }
+                    withStyle(style = SpanStyle(color = Color.Red)) {
+                        append("TFLite-")
+                    }
+                    withStyle(style = SpanStyle(color = Color.Green)) {
+                        append(viewModel.getModelDelegate())
+                    }
+                },
+                modifier = Modifier
+                    //.align(Alignment.TopStart)
+                    .padding(16.dp,0.dp) ,
+                color = Color.White,
+                fontSize = 14.sp
+            )
+            Text(
                 text = "PreviewView FPS: ${"%.1f".format(previewViewFps)}",
                 modifier = Modifier
                     //.align(Alignment.TopStart)

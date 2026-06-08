@@ -3,6 +3,7 @@ package com.example.yolo26localposeanalyzer.utils.extentions
 import android.graphics.RectF
 import androidx.compose.ui.geometry.Size
 import com.example.yolo26localposeanalyzer.domain.model.LetterboxResult
+import com.example.yolo26localposeanalyzer.domain.model.LetterboxResultV2
 import com.example.yolo26localposeanalyzer.domain.model.ReverseMapping
 import kotlin.math.max
 
@@ -76,6 +77,25 @@ fun RectF.mapFromModel(
     val top =  top * modelSize
     val right =  right * modelSize
     val bottom =  bottom * modelSize
+
+    // Step 2: remove padding
+    val x1 = (left - letterbox.padX) / letterbox.scale
+    val y1 = (top - letterbox.padY) / letterbox.scale
+    val x2 = (right - letterbox.padX) / letterbox.scale
+    val y2 = (bottom - letterbox.padY) / letterbox.scale
+
+    return RectF(x1, y1, x2, y2)
+}
+
+fun RectF.mapFromModel(
+    letterbox: LetterboxResultV2
+): RectF {
+
+    // Step 1: normalized → model pixels
+    val left =  left * letterbox.modelSize
+    val top =  top * letterbox.modelSize
+    val right =  right * letterbox.modelSize
+    val bottom =  bottom * letterbox.modelSize
 
     // Step 2: remove padding
     val x1 = (left - letterbox.padX) / letterbox.scale

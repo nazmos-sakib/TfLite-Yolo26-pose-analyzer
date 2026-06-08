@@ -7,6 +7,7 @@ import com.example.yolo26localposeanalyzer.domain.model.DetectedObject
 import com.example.yolo26localposeanalyzer.domain.model.DetectedPose
 import com.example.yolo26localposeanalyzer.domain.model.Keypoint
 import com.example.yolo26localposeanalyzer.domain.model.LetterboxResult
+import com.example.yolo26localposeanalyzer.domain.model.LetterboxResultV2
 import com.example.yolo26localposeanalyzer.domain.model.ReverseMapping
 import com.example.yolo26localposeanalyzer.domain.model.deNormalize
 import com.example.yolo26localposeanalyzer.domain.model.mapFromModel
@@ -16,67 +17,6 @@ import com.example.yolo26localposeanalyzer.utils.extentions.mapToPreview
 
 
 object YOLOPostprocessor {
-
-    /**
-     * Parse YOLO v8/26 detection output for [1, 300, 6] format.
-     * Format: [batch, detections, (x1, y1, x2, y2, confidence, class_id)]
-     */
-    fun parseOutputShape300x6(
-        outputArray: Array<Array<FloatArray>>,
-        letterBox: LetterboxResult
-    ): List<DetectedObject> {
-        val detections = mutableListOf<DetectedObject>()
-
-        // Output shape: [1, 300, 6]
-        val batchOutput = outputArray[0] // First batch
-        val numDetections = batchOutput.size // Should be 300
-        //Log.d(ModelOutpuDebugTag, "YoloPostProcess:parseOutputShape300x6: batchOutput: ${batchOutput.size}")
-
-        for (i in 0 until numDetections) {
-            val detection = batchOutput[i]
-
-            // Format: [x1, y1, x2, y2, confidence, class_id]
-            val x1 = detection[0]
-            val y1 = detection[1]
-            val x2 = detection[2]
-            val y2 = detection[3]
-            val confidence = detection[4]
-            val classId = detection[5].toInt()
-
-            // Skip invalid or low confidence detections
-            if (confidence < Constants.CONFIDENCE_THRESHOLD || x1 == 0f && y1 == 0f && x2 == 0f && y2 == 0f) {
-                continue
-            }
-
-            /*
-            * bounding box values between 0 and 1
-            * [left=0.0237, top=0.6415, right=0.1758, bottom=0.9997]
-            * These are normalized coordinates, NOT pixels.
-            * Convert to pixels:
-            * pixelX = normalizedX * inputWidth
-            * pixelY = normalizedY * inputHeight
-            * */
-            val boundingBox = RectF(x1, y1, x2, y2).mapFromModel(letterBox)
-            val label = if (classId < Constants.COCO_CLASSES.size) {
-                Constants.COCO_CLASSES[classId]
-            } else {
-                "unknown"
-            }
-
-            detections.add(
-                DetectedObject(
-                    boundingBox = boundingBox,
-                    label = label,
-                    confidence = confidence,
-                    classId = classId
-                )
-            )
-        }
-
-        // Apply Non-Maximum Suppression
-        return nonMaximumSuppression(detections, Constants.NMS_THRESHOLD)
-        //return detections
-    }
 
     /**
     * yolo26 pose output format [1, 300, 57].
@@ -91,7 +31,7 @@ object YOLOPostprocessor {
     * */
     fun parseOutputShape300x57(
         outputArray: Array<Array<FloatArray>>,
-        letterBox: LetterboxResult,
+        letterBox: LetterboxResultV2,
         revMapping: ReverseMapping
     ): List<DetectedPose> {
         val detections = mutableListOf<DetectedPose>()

@@ -93,120 +93,6 @@ kpt16 → [54,55,56]
 ```
 
 
----
-
-# ⚙️ How to read the output buffer
-
-### ✅ Correct buffer setup
-
-```java
-float[][][] output = new float[1][300][57];
-
-tflite.run(inputBuffer, output);
-```
-
----
-
-# 🔍 Decoding loop (FULL example)
-
-```java
-for (int i = 0; i < 300; i++) {
-
-    float objConf = output[0][i][4];
-
-    if (objConf < 0.5f) continue; // filter weak detections
-
-    float cx = output[0][i][0];
-    float cy = output[0][i][1];
-    float w  = output[0][i][2];
-    float h  = output[0][i][3];
-
-    // Convert center → box corners
-    float x1 = cx - w / 2;
-    float y1 = cy - h / 2;
-    float x2 = cx + w / 2;
-    float y2 = cy + h / 2;
-
-    // --- KEYPOINTS ---
-    int kptStart = 6;
-
-    List<Keypoint> keypoints = new ArrayList<>();
-
-    for (int k = 0; k < 17; k++) {
-
-        float kx = output[0][i][kptStart + k * 3];
-        float ky = output[0][i][kptStart + k * 3 + 1];
-        float kc = output[0][i][kptStart + k * 3 + 2];
-
-        if (kc > 0.5f) {
-            keypoints.add(new Keypoint(kx, ky, kc));
-        }
-    }
-
-    // Save detection
-}
-```
-
----
-
-# ⚠️ VERY IMPORTANT: Coordinate format
-
-Now the critical question:
-
-### Are values normalized OR pixel-based?
-
-Check by printing:
-
-```java
-Log.d("VAL", "cx=" + cx + ", cy=" + cy);
-```
-
-### Case A: Values between 0–1
-
-👉 normalized → multiply by 640
-
-```java
-cx *= 640;
-cy *= 640;
-w  *= 640;
-h  *= 640;
-```
-
----
-
-### Case B: Values around 0–640
-
-👉 already pixel space → DO NOTHING
-
----
-
-# 📱 Mapping to screen
-
-If your preview is not 640×640:
-
-```java
-float scaleX = viewWidth / 640f;
-float scaleY = viewHeight / 640f;
-
-float screenX = modelX * scaleX;
-float screenY = modelY * scaleY;
-```
-
----
-
-# 🎨 Drawing (quick example)
-
-```java
-// Box
-canvas.drawRect(x1, y1, x2, y2, boxPaint);
-
-// Keypoints
-for (Keypoint kp : keypoints) {
-    canvas.drawCircle(kp.x, kp.y, 6, keypointPaint);
-}
-```
-
----
 
 # 🧩 Optional: Draw skeleton (recommended)
 
@@ -290,3 +176,10 @@ IDevice::prepareModel() error: hardware/interfaces/neuralnetworks/aidl/utils/src
                                                                              	at org.tensorflow.lite.NativeInterpreterWrapper.createInterpreter(Native Method)
 
 ```
+# Gesture control
+
+the real question is not:
+> “Is gesture control better?”
+
+But:
+> “When is gesture control worth it?”

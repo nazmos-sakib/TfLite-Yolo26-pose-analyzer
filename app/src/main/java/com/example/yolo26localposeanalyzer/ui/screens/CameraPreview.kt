@@ -13,9 +13,11 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -26,6 +28,7 @@ import java.util.concurrent.Executors
 //Clean
 @Composable
 fun CameraPreview(
+    modifier: Modifier = Modifier,
     outputImageProxyFormat: Int,
     camera: CameraSelector,
     aspectRation: Int,
@@ -147,11 +150,11 @@ fun CameraPreview(
 
     AndroidView(
         factory = { previewView },
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             //when no aspect ratio is set previewView is width:1080 height: 2294
             //.aspectRatio(1f) //->1080x1080
-            //.aspectRatio((4f / 3f))
+            .aspectRatio((4f / 3f))
     )
 
 

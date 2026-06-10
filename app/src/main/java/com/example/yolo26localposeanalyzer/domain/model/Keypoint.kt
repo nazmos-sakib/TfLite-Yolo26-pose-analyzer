@@ -7,7 +7,12 @@ data class Keypoint(
     val kx: Float,
     val ky: Float,
     val kc: Float,
-)
+){
+    override fun toString(): String {
+        return "(x=${kx.format()}, y=${ky.format()}, c=${kc.format()})"
+    }
+    private fun Float.format() = "%.3f".format(this)
+}
 
 
 

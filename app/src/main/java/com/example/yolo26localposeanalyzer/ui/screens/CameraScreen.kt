@@ -3,18 +3,29 @@ package com.example.yolo26localposeanalyzer.ui.screens
 // presentation/ui/CameraScreen.kt
 
 import android.graphics.Paint
+import android.graphics.RectF
 import android.util.Log
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.snapping.SnapPosition
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,10 +34,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +50,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.yolo26localposeanalyzer.domain.model.DetectedPose
 import com.example.yolo26localposeanalyzer.domain.model.Keypoint
+import com.example.yolo26localposeanalyzer.domain.model.Pose
+import com.example.yolo26localposeanalyzer.domain.model.toPose
 import com.example.yolo26localposeanalyzer.ui.viewmodel.CameraViewModel
 import com.example.yolo26localposeanalyzer.utils.ChoreographerFPSMonitor
 import com.example.yolo26localposeanalyzer.utils.Constants.PerformanceDebugTag
@@ -52,6 +68,7 @@ fun CameraScreen(viewModel: CameraViewModel) {
     val previewViewFps by viewModel.previewViewFps.collectAsStateWithLifecycle()
     val imageProxyFps by viewModel.imageProxyFps.collectAsStateWithLifecycle()
     val inferenceFps by viewModel.inferenceFps.collectAsStateWithLifecycle()
+    val cmd by viewModel.command.collectAsStateWithLifecycle()
 
     var previewViewSize: Size by remember { mutableStateOf(Size(0f,0f)) }
     var imageProxySize: Size by remember { mutableStateOf(Size(0f,0f)) }
@@ -109,6 +126,7 @@ fun CameraScreen(viewModel: CameraViewModel) {
     ) {
 
         CameraPreview(
+            modifier = Modifier.align(Alignment.BottomCenter),
             outputImageProxyFormat = outputImageProxyFormat,
             camera = cameraSelector,
             aspectRation = imageProxyAspectRation,
@@ -174,75 +192,104 @@ fun CameraScreen(viewModel: CameraViewModel) {
             }
         }
 
-        // FPS and processing indicator
-        if (isProcessing) {
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-            )
-        }
-
-        Column(
-            modifier = Modifier.align(Alignment.TopStart),
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = Color.White)) {
-                        append("Device Name: ")
-                    }
-                    withStyle(style = SpanStyle(color = Color.Green)) {
-                        append(Utility.getDeviceName())
-                    }
-                },
+            Column(
+                modifier = Modifier.weight(.6f),
+            ) {
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(style = SpanStyle(color = Color.White)) {
+                            append("Device Name: ")
+                        }
+                        withStyle(style = SpanStyle(color = Color.Green)) {
+                            append(Utility.getDeviceName())
+                        }
+                    },
+                    modifier = Modifier
+                        //.align(Alignment.TopStart)
+                        .padding(16.dp,5.dp) ,
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(style = SpanStyle(color = Color.White)) {
+                            append("Implementation: ")
+                        }
+                        withStyle(style = SpanStyle(color = Color.Red)) {
+                            append("TFLite-")
+                        }
+                        withStyle(style = SpanStyle(color = Color.Green)) {
+                            append(viewModel.getModelDelegate())
+                        }
+                    },
+                    modifier = Modifier
+                        //.align(Alignment.TopStart)
+                        .padding(16.dp,0.dp) ,
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = "PreviewView FPS: ${"%.1f".format(previewViewFps)}",
+                    modifier = Modifier
+                        //.align(Alignment.TopStart)
+                        .padding(16.dp,5.dp),
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = "ImageProxy FPS: ${"%.1f".format(imageProxyFps)}",
+                    modifier = Modifier
+                        //.align(Alignment.TopStart)
+                        .padding(16.dp,5.dp),
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = "Inference FPS: ${"%.1f".format(inferenceFps)}",
+                    modifier = Modifier
+                        //.align(Alignment.TopStart)
+                        .padding(16.dp,5.dp),
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
+            }
+
+            VerticalDivider(
                 modifier = Modifier
-                    //.align(Alignment.TopStart)
-                    .padding(16.dp,5.dp) ,
-                color = Color.White,
-                fontSize = 14.sp
+                    .padding(top = 20.dp)
+                    .fillMaxHeight(.13f)
+                    .width(1.dp),
+                color = Color.Gray
             )
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = Color.White)) {
-                        append("Implementation: ")
-                    }
-                    withStyle(style = SpanStyle(color = Color.Red)) {
-                        append("TFLite-")
-                    }
-                    withStyle(style = SpanStyle(color = Color.Green)) {
-                        append(viewModel.getModelDelegate())
-                    }
-                },
-                modifier = Modifier
-                    //.align(Alignment.TopStart)
-                    .padding(16.dp,0.dp) ,
-                color = Color.White,
-                fontSize = 14.sp
-            )
-            Text(
-                text = "PreviewView FPS: ${"%.1f".format(previewViewFps)}",
-                modifier = Modifier
-                    //.align(Alignment.TopStart)
-                    .padding(16.dp,5.dp),
-                color = Color.White,
-                fontSize = 14.sp
-            )
-            Text(
-                text = "ImageProxy FPS: ${"%.1f".format(imageProxyFps)}",
-                modifier = Modifier
-                    //.align(Alignment.TopStart)
-                    .padding(16.dp,5.dp),
-                color = Color.White,
-                fontSize = 14.sp
-            )
-            Text(
-                text = "Inference FPS: ${"%.1f".format(inferenceFps)}",
-                modifier = Modifier
-                    //.align(Alignment.TopStart)
-                    .padding(16.dp,5.dp),
-                color = Color.White,
-                fontSize = 14.sp
-            )
+
+            Box(
+                modifier = Modifier.weight(.5f).height(200.dp)
+            ) {
+                // FPS and processing indicator
+                if (isProcessing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .align(Alignment.TopCenter)
+                    )
+                }
+                Text(
+                    text = cmd,
+                    modifier = Modifier
+                        .padding(horizontal = 10.dp ,vertical = 50.dp)
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(Color(0xFFF5F5F5)),
+                    color = Color(0xFF1C1B1F),
+                    textAlign = TextAlign.Center
+                )
+            }
+
         }
     }
 }
@@ -263,8 +310,11 @@ private fun DrawScope.drawBoundingBox(
 
     val bbox = detection.boundingBox
         //.mapToPreview( previewViewSize, imageProxySize)
-        .apply {
+        /*.apply {
             offset(0f, previewTopOffset)
+        }*/
+        .let {
+            RectF(it.left, it.top + previewTopOffset, it.right, it.bottom + previewTopOffset)
         }
 
     //Log.d(ImageDebugTag, "CameraScreen:drawBoundingBox: ract: $bbox")
@@ -325,6 +375,8 @@ private fun DrawScope.drawBoundingBox(
 
     drawSkeleton(detection.keyPoints,previewViewSize,previewTopOffset)
 
+    //drawPoseWithLabels(detection.keyPoints.toPose())
+
 }
 
 // --- DRAW SKELETON ---
@@ -367,5 +419,69 @@ private fun DrawScope.drawSkeleton(
             end = Offset(x2, y2),
             strokeWidth = 3f
         )
+    }
+}
+
+fun DrawScope.drawPoseWithLabels(
+    pose: Pose,
+    labelColor: Color = Color.White,
+    pointColor: Color = Color.Red,
+    pointRadius: Float = 8f,
+    showConfidence: Boolean = true,
+    textSize: Float = 14f
+) {
+    val keypointsWithLabels = mapOf(
+        pose.nose to "Nose",
+        pose.leftEye to "L Eye",
+        pose.rightEye to "R Eye",
+        pose.leftEar to "L Ear",
+        pose.rightEar to "R Ear",
+        pose.leftShoulder to "L Shoulder",
+        pose.rightShoulder to "R Shoulder",
+        pose.leftElbow to "L Elbow",
+        pose.rightElbow to "R Elbow",
+        pose.leftWrist to "L Wrist",
+        pose.rightWrist to "R Wrist",
+        pose.leftHip to "L Hip",
+        pose.rightHip to "R Hip",
+        pose.leftKnee to "L Knee",
+        pose.rightKnee to "R Knee",
+        pose.leftAnkle to "L Ankle",
+        pose.rightAnkle to "R Ankle"
+    )
+
+    drawIntoCanvas { canvas ->
+        keypointsWithLabels.forEach { (keypoint, label) ->
+            if (keypoint.kc > 0.3f) { // Confidence threshold
+                val offset = Offset(keypoint.kx, keypoint.ky)
+
+                // Draw point
+                drawCircle(
+                    color = pointColor,
+                    radius = pointRadius,
+                    center = offset
+                )
+
+                // Draw label
+                val paint = Paint().apply {
+                    color = labelColor.toArgb()
+                    isAntiAlias = true
+                    textAlign = Paint.Align.LEFT
+                }
+
+                val labelText = if (showConfidence) {
+                    "$label (${String.format("%.2f", keypoint.kc)})"
+                } else {
+                    label
+                }
+
+                canvas.nativeCanvas.drawText(
+                    labelText,
+                    offset.x + pointRadius + 4f,
+                    offset.y - pointRadius - 4f,
+                    paint
+                )
+            }
+        }
     }
 }

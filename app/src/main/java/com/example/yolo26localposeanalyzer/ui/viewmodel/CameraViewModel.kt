@@ -15,6 +15,8 @@ import com.example.yolo26localposeanalyzer.data.repository.ObjectDetectionReposi
 import com.example.yolo26localposeanalyzer.domain.model.DetectedObject
 import com.example.yolo26localposeanalyzer.domain.model.DetectedPose
 import com.example.yolo26localposeanalyzer.domain.model.ReverseMapping
+import com.example.yolo26localposeanalyzer.domain.model.toPose
+import com.example.yolo26localposeanalyzer.domain.usecase.GestureDetector
 import com.example.yolo26localposeanalyzer.utils.Constants.ImageDebugTag
 import com.example.yolo26localposeanalyzer.utils.Constants.PerformanceDebugTag
 import com.example.yolo26localposeanalyzer.utils.Constants.UiDebugTag
@@ -36,10 +38,10 @@ class CameraViewModel(
 
     private val inferenceFpsCounter = FpsCounter()
     private val imageProxyFpsCounter = FpsCounter()
-/*
-    private val _detectedObjects = MutableStateFlow<List<DetectedObject>>(emptyList())
-    val detectedObjects: StateFlow<List<DetectedObject>> = _detectedObjects.asStateFlow()
-*/
+
+    val gestureDetector = GestureDetector()
+    private val _command = MutableStateFlow("NONE")
+    val command: StateFlow<String> = _command
 
     private val _detectedObjects = MutableStateFlow<List<DetectedPose>>(emptyList())
     val detectedObjects: StateFlow<List<DetectedPose>> = _detectedObjects.asStateFlow()
@@ -77,10 +79,16 @@ class CameraViewModel(
             try {
                 //val results = repository.detectObjects(bitmap)
                 val results = repository.detectPose(bitmap,revMapping)
+                // take first person only
+                val pose = results.firstOrNull()?.keyPoints?.toPose()
+                Log.d(UiDebugTag, "processFrame: $pose")
+                val cmd = if (pose != null) gestureDetector.detect(pose) else "NO PERSON"
+
                 Log.d(UiDebugTag, "viewmodel: processFrame: objects found: ${results.size}")
                 Log.d(UiDebugTag, "viewmodel: processFrame: $results")
                 withContext(Dispatchers.Main) {
                     _detectedObjects.value = results
+                    _command.value = cmd
                     updateInferenceFPS()
                 }
             } catch (e: Exception) {
